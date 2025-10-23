@@ -5,14 +5,19 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Prevent multiple deployments running at the same time
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
 permissions:
   contents: read
   pages: write
   id-token: write
 
 jobs:
-  build-and-deploy:
-    name: Build and Deploy to GitHub Pages
+  deploy:
+    name: Build and Deploy
     runs-on: ubuntu-latest
     
     environment:
@@ -40,12 +45,14 @@ jobs:
       - name: Build project
         run: npm run build
 
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
       - name: Prepare deployment files
         run: |
           echo "📦 Preparing deployment files..."
           mkdir -p _site
           cp -r public/* _site/
-          ls -la _site/
           echo "✅ Files ready for deployment"
 
       - name: Upload artifact
@@ -57,10 +64,10 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Display deployment URL
+      - name: Deployment Success
         run: |
           echo "================================================"
-          echo "✅ Deployment Successful!"
+          echo "✅ DEPLOYMENT SUCCESSFUL!"
           echo "🌐 Your website is live at:"
           echo "${{ steps.deployment.outputs.page_url }}"
           echo "================================================"

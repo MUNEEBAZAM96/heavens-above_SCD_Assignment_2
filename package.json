@@ -6,8 +6,9 @@
   "main": "run.js",
   "scripts": {
     "start": "node run.js",
-    "lint": "eslint . --ext .js",
+    "lint": "eslint . --ext .js --max-warnings 100",
     "lint:fix": "eslint . --ext .js --fix",
+    "lint:strict": "eslint . --ext .js",
     "test": "node test.js",
     "test:ci": "node test.js",
     "build": "node run.js",

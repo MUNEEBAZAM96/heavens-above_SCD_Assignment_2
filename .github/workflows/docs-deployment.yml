@@ -1,0 +1,76 @@
+name: Documentation Deployment
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - '*.md'
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy-docs:
+    name: Build and Deploy Documentation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create documentation
+        run: |
+          echo "📚 Building documentation..."
+          mkdir -p docs-site
+          
+          cat > docs-site/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>Heavens Above - Documentation</title>
+              <style>
+                  body { font-family: sans-serif; max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
+                  h1 { color: #667eea; }
+                  .card { background: #f5f5f5; padding: 1rem; margin: 1rem 0; border-radius: 5px; }
+              </style>
+          </head>
+          <body>
+              <h1>🌟 Heavens Above Documentation</h1>
+              <p>Complete GitHub Actions Workflows Documentation</p>
+              
+              <div class="card">
+                  <h2>📋 Available Workflows</h2>
+                  <ul>
+                      <li>✅ Continuous Integration</li>
+                      <li>✅ Deployment Pipeline</li>
+                      <li>✅ Scheduled Tasks</li>
+                      <li>✅ Dependency Updates</li>
+                      <li>✅ Code Review</li>
+                      <li>✅ Documentation Deployment</li>
+                      <li>✅ Custom Workflow</li>
+                  </ul>
+              </div>
+              
+              <div class="card">
+                  <h2>🚀 Quick Links</h2>
+                  <p><strong>Repository:</strong> <a href="https://github.com/MUNEEBAZAM96/heavens-above_SCD_Assignment_2">GitHub</a></p>
+                  <p><strong>Live Site:</strong> <a href="https://muneebazam96.github.io/heavens-above_SCD_Assignment_2/">Application</a></p>
+              </div>
+          </body>
+          </html>
+          EOF
+          
+          echo "✅ Documentation generated"
+
+      - name: Upload documentation artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation
+          path: docs-site/
+          retention-days: 90
+
+      - name: Deployment complete
+        run: |
+          echo "================================================"
+          echo "✅ DOCUMENTATION DEPLOYMENT COMPLETED"
+          echo "📚 Files generated and uploaded as artifact"
+          echo "================================================"

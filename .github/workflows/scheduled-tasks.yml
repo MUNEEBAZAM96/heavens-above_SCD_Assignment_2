@@ -1,0 +1,102 @@
+name: Scheduled Tasks
+
+on:
+  schedule:
+    # Runs daily at 2:00 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:  # Allows manual trigger for testing
+
+jobs:
+  maintenance:
+    name: Daily Maintenance Tasks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Check for outdated dependencies
+        run: |
+          echo "🔍 Checking for outdated dependencies..."
+          npm outdated || true
+          echo "✅ Dependency check complete"
+
+      - name: Run security audit
+        run: |
+          echo "🔒 Running security audit..."
+          npm audit --audit-level=moderate || true
+          echo "✅ Security audit complete"
+
+      - name: Clean old artifacts
+        run: |
+          echo "🧹 Cleaning temporary files..."
+          rm -rf node_modules/.cache || true
+          echo "✅ Cleanup complete"
+
+      - name: Check disk usage
+        run: |
+          echo "💾 Checking disk usage..."
+          df -h
+          echo "✅ Disk check complete"
+
+      - name: Generate maintenance report
+        run: |
+          echo "📊 Generating maintenance report..."
+          echo "==================================="
+          echo "Maintenance Report - $(date)"
+          echo "==================================="
+          echo "Node version: $(node --version)"
+          echo "NPM version: $(npm --version)"
+          echo "Repository: ${{ github.repository }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "==================================="
+          echo "✅ Report generated successfully"
+
+      - name: Notify completion
+        run: |
+          echo "================================================"
+          echo "✅ SCHEDULED MAINTENANCE COMPLETED"
+          echo "📅 Date: $(date)"
+          echo "⏰ Next run: Tomorrow at 2:00 AM UTC"
+          echo "================================================"
+
+  weekly-backup:
+    name: Weekly Backup
+    runs-on: ubuntu-latest
+    # Only runs on Sundays
+    if: github.event.schedule == '0 2 * * 0' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create backup
+        run: |
+          echo "💾 Creating weekly backup..."
+          mkdir -p backup
+          cp -r public backup/public-$(date +%Y%m%d)
+          echo "✅ Backup created"
+
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-backup-${{ github.run_number }}
+          path: backup/
+          retention-days: 30
+
+      - name: Backup notification
+        run: |
+          echo "================================================"
+          echo "✅ WEEKLY BACKUP COMPLETED"
+          echo "📦 Backup stored as artifact"
+          echo "🕐 Retention: 30 days"
+          echo "================================================"
+

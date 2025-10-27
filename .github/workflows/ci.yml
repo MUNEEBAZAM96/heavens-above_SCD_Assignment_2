@@ -1,40 +1,36 @@
-name: Continuous Integration
+name: CI
 
 on:
   push:
     branches: [main]
 
 jobs:
-  ci:
-    name: CI - Test, Lint, and Build
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-
-      - name: Install dependencies
+      
+      - name: Install deps
         run: npm install
-
-      - name: Run Linting
+      
+      # Run linting first to catch style issues
+      - name: Lint code
         run: npm run lint
-        continue-on-error: false
-
-      - name: Run Tests
+      
+      # Then run tests
+      - name: Test
         run: npm test
-
-      - name: Build Project
+      
+      # Finally try to build
+      - name: Build
         run: npm run build
-
-      - name: Report Success
+      
+      - name: Success
         if: success()
-        run: echo "✅ All checks passed successfully!"
-
-      - name: Report Failure
-        if: failure()
-        run: echo "❌ Some checks failed. Please review the logs above."
+        run: echo "All checks passed!"

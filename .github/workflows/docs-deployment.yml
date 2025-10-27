@@ -1,4 +1,4 @@
-name: Documentation Deployment
+name: Deploy Docs
 
 on:
   push:
@@ -9,68 +9,71 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-deploy-docs:
-    name: Build and Deploy Documentation
+  build-docs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Create documentation
+      # Generate documentation site
+      - name: Build docs
         run: |
-          echo "📚 Building documentation..."
           mkdir -p docs-site
           
+          # Create simple docs page
           cat > docs-site/index.html << 'EOF'
           <!DOCTYPE html>
           <html>
           <head>
-              <title>Heavens Above - Documentation</title>
+              <title>Heavens Above - Docs</title>
               <style>
-                  body { font-family: sans-serif; max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
-                  h1 { color: #667eea; }
-                  .card { background: #f5f5f5; padding: 1rem; margin: 1rem 0; border-radius: 5px; }
+                  body { 
+                      font-family: Arial, sans-serif; 
+                      max-width: 1000px; 
+                      margin: 50px auto; 
+                      padding: 20px;
+                  }
+                  h1 { color: #333; }
+                  .section { 
+                      background: #f5f5f5; 
+                      padding: 20px; 
+                      margin: 20px 0; 
+                      border-radius: 5px;
+                  }
               </style>
           </head>
           <body>
-              <h1>🌟 Heavens Above Documentation</h1>
-              <p>Complete GitHub Actions Workflows Documentation</p>
+              <h1>Heavens Above Documentation</h1>
+              <p>Automated documentation for the Heavens Above project</p>
               
-              <div class="card">
-                  <h2>📋 Available Workflows</h2>
+              <div class="section">
+                  <h2>Available Workflows</h2>
                   <ul>
-                      <li>✅ Continuous Integration</li>
-                      <li>✅ Deployment Pipeline</li>
-                      <li>✅ Scheduled Tasks</li>
-                      <li>✅ Dependency Updates</li>
-                      <li>✅ Code Review</li>
-                      <li>✅ Documentation Deployment</li>
-                      <li>✅ Custom Workflow</li>
+                      <li>CI - Continuous Integration</li>
+                      <li>Deploy - Deployment Pipeline</li>
+                      <li>Scheduled Maintenance</li>
+                      <li>Dependency Updates</li>
+                      <li>PR Checks</li>
+                      <li>Documentation Deployment</li>
+                      <li>Release & Analytics</li>
                   </ul>
               </div>
               
-              <div class="card">
-                  <h2>🚀 Quick Links</h2>
-                  <p><strong>Repository:</strong> <a href="https://github.com/MUNEEBAZAM96/heavens-above_SCD_Assignment_2">GitHub</a></p>
-                  <p><strong>Live Site:</strong> <a href="https://muneebazam96.github.io/heavens-above_SCD_Assignment_2/">Application</a></p>
+              <div class="section">
+                  <h2>Links</h2>
+                  <p><a href="https://github.com/MUNEEBAZAM96/heavens-above_SCD_Assignment_2">Repository</a></p>
+                  <p><a href="https://muneebazam96.github.io/heavens-above_SCD_Assignment_2/">Live Site</a></p>
               </div>
           </body>
           </html>
           EOF
-          
-          echo "✅ Documentation generated"
 
-      - name: Upload documentation artifact
+      # Save docs as artifact
+      - name: Upload docs
         uses: actions/upload-artifact@v4
         with:
           name: documentation
           path: docs-site/
           retention-days: 90
 
-      - name: Deployment complete
-        run: |
-          echo "================================================"
-          echo "✅ DOCUMENTATION DEPLOYMENT COMPLETED"
-          echo "📚 Files generated and uploaded as artifact"
-          echo "================================================"
+      - run: echo "Documentation built and saved"

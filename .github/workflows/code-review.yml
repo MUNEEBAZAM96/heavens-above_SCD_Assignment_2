@@ -1,9 +1,8 @@
-name: Code Review
+name: PR Checks
 
 on:
   pull_request:
     branches: [main]
-    types: [opened, synchronize, reopened]
 
 permissions:
   contents: read
@@ -12,221 +11,165 @@ permissions:
   checks: write
 
 jobs:
-  code-standards:
-    name: Check Coding Standards
+  lint:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '18'
 
-      - name: Install dependencies
-        run: npm install
+      - run: npm install
 
-      - name: Run ESLint
+      # Run linting and save output
+      - name: Run linting
         run: |
-          echo "📋 Checking coding standards..."
-          npm run lint > eslint-report.txt 2>&1 || true
-          cat eslint-report.txt
+          npm run lint > lint-output.txt 2>&1 || true
+          cat lint-output.txt
 
-      - name: Comment ESLint results
+      # Post results as comment
+      - name: Comment results
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
-            let report = 'No linting report available';
+            let output = '';
             try {
-              report = fs.readFileSync('eslint-report.txt', 'utf8');
+              output = fs.readFileSync('lint-output.txt', 'utf8');
             } catch (e) {
-              report = 'Could not read linting report';
+              output = 'Could not read linting results';
             }
             
-            const body = `## 📋 Code Standards Check
+            const comment = `## Linting Results
             
             \`\`\`
-            ${report.substring(0, 5000)}
-            \`\`\`
-            
-            ${report.includes('0 errors') ? '✅ No errors found!' : '⚠️ Please fix linting errors'}`;
+            ${output.substring(0, 3000)}
+            \`\`\``;
             
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: body
+              body: comment
             });
 
-      - name: Check coding standards result
+      # Fail if linting didn't pass
+      - name: Check lint status
         run: npm run lint
 
-  code-quality:
-    name: Analyze Code Quality
+  tests:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '18'
 
-      - name: Install dependencies
-        run: npm install
+      - run: npm install
+      - run: npm test
 
-      - name: Run tests with coverage
-        run: npm test
-
-      - name: Code complexity analysis
-        run: |
-          echo "📊 Analyzing code complexity..."
-          echo "==================================="
-          echo "Files analyzed:"
-          find src -name "*.js" -type f | wc -l
-          echo "Lines of code:"
-          find src -name "*.js" -type f -exec wc -l {} + | tail -1
-          echo "==================================="
-
-      - name: Comment code quality metrics
+      # Post test results
+      - name: Post results
         uses: actions/github-script@v7
         with:
           script: |
-            const body = `## 📊 Code Quality Metrics
+            const comment = `## Test Results
             
-            ✅ **Tests**: All tests passed
-            📈 **Code Analysis**: Completed
-            🔍 **Files Checked**: JavaScript files in src/
+            All tests passed successfully.
             
-            ### Recommendations:
-            - Maintain test coverage
-            - Keep functions small and focused
-            - Follow established patterns
-            
-            *Quality check completed successfully*`;
+            Code looks good!`;
             
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: body
+              body: comment
             });
 
-  security-scan:
-    name: Security Vulnerability Scan
+  security:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '18'
 
-      - name: Install dependencies
-        run: npm install
+      - run: npm install
 
-      - name: Run npm audit
+      # Check for security issues
+      - name: Security check
         run: |
-          echo "🔒 Scanning for security vulnerabilities..."
-          npm audit --json > audit-report.json || true
+          npm audit --json > audit.json || true
           npm audit || true
 
-      - name: Check for critical vulnerabilities
-        id: audit-check
-        run: |
-          if npm audit --audit-level=high; then
-            echo "status=pass" >> $GITHUB_OUTPUT
-            echo "✅ No high/critical vulnerabilities found"
-          else
-            echo "status=warning" >> $GITHUB_OUTPUT
-            echo "⚠️ Security vulnerabilities detected"
-          fi
-
-      - name: Comment security scan results
+      # Post security status
+      - name: Post security status
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
-            let auditData = {};
+            let audit = {};
             try {
-              const auditReport = fs.readFileSync('audit-report.json', 'utf8');
-              auditData = JSON.parse(auditReport);
+              const data = fs.readFileSync('audit.json', 'utf8');
+              audit = JSON.parse(data);
             } catch (e) {
-              console.log('Could not parse audit report');
+              console.log('Could not parse audit');
             }
             
-            const vulnerabilities = auditData.metadata?.vulnerabilities || {};
-            const total = Object.values(vulnerabilities).reduce((a, b) => a + b, 0);
+            const vulns = audit.metadata?.vulnerabilities || {};
+            const total = Object.values(vulns).reduce((a, b) => a + b, 0);
             
-            const body = `## 🔒 Security Scan Results
+            const comment = `## Security Check
             
-            ${total === 0 ? '✅ No vulnerabilities detected!' : '⚠️ Vulnerabilities found'}
+            ${total === 0 ? 'No vulnerabilities found' : 'Vulnerabilities detected'}
             
-            **Vulnerability Summary:**
-            - Critical: ${vulnerabilities.critical || 0}
-            - High: ${vulnerabilities.high || 0}
-            - Moderate: ${vulnerabilities.moderate || 0}
-            - Low: ${vulnerabilities.low || 0}
-            
-            ${total > 0 ? '**Action Required:** Please run \`npm audit fix\` to resolve vulnerabilities' : '**Status:** All dependencies are secure'}
-            
-            *Security scan completed*`;
+            - Critical: ${vulns.critical || 0}
+            - High: ${vulns.high || 0}
+            - Moderate: ${vulns.moderate || 0}
+            - Low: ${vulns.low || 0}`;
             
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: body
+              body: comment
             });
 
-  pr-review-summary:
-    name: PR Review Summary
+  # Summary of all checks
+  summary:
     runs-on: ubuntu-latest
-    needs: [code-standards, code-quality, security-scan]
+    needs: [lint, tests, security]
     if: always()
 
     steps:
-      - name: Create review summary
+      - name: Post summary
         uses: actions/github-script@v7
         with:
           script: |
-            const jobs = [
-              { name: 'Code Standards', status: '${{ needs.code-standards.result }}' },
-              { name: 'Code Quality', status: '${{ needs.code-quality.result }}' },
-              { name: 'Security Scan', status: '${{ needs.security-scan.result }}' }
-            ];
+            const results = {
+              lint: '${{ needs.lint.result }}',
+              tests: '${{ needs.tests.result }}',
+              security: '${{ needs.security.result }}'
+            };
             
-            const allPassed = jobs.every(job => job.status === 'success');
-            const statusIcon = allPassed ? '✅' : '⚠️';
+            const allPassed = Object.values(results).every(r => r === 'success');
             
-            let summary = `## ${statusIcon} Code Review Summary\n\n`;
-            summary += '| Check | Status |\n';
-            summary += '|-------|--------|\n';
-            
-            jobs.forEach(job => {
-              const icon = job.status === 'success' ? '✅' : '❌';
-              summary += `| ${job.name} | ${icon} ${job.status} |\n`;
-            });
-            
-            summary += '\n';
-            summary += allPassed 
-              ? '### ✅ All checks passed! This PR is ready for review.\n\n'
-              : '### ⚠️ Some checks failed. Please review the feedback above.\n\n';
-            
-            summary += '**Next Steps:**\n';
-            summary += allPassed
-              ? '- Request review from team members\n- Address any review comments\n- Merge when approved\n'
-              : '- Fix failing checks\n- Push changes to update PR\n- Re-run checks\n';
+            let summary = `## PR Check Summary\n\n`;
+            summary += `| Check | Status |\n`;
+            summary += `|-------|--------|\n`;
+            summary += `| Linting | ${results.lint === 'success' ? '✅' : '❌'} |\n`;
+            summary += `| Tests | ${results.tests === 'success' ? '✅' : '❌'} |\n`;
+            summary += `| Security | ${results.security === 'success' ? '✅' : '❌'} |\n`;
+            summary += `\n${allPassed ? 'All checks passed - ready to merge' : 'Some checks failed - please fix'}`;
             
             github.rest.issues.createComment({
               issue_number: context.issue.number,
@@ -234,16 +177,3 @@ jobs:
               repo: context.repo.repo,
               body: summary
             });
-
-      - name: Set PR status
-        run: |
-          if [ "${{ needs.code-standards.result }}" == "success" ] && \
-             [ "${{ needs.code-quality.result }}" == "success" ] && \
-             [ "${{ needs.security-scan.result }}" == "success" ]; then
-            echo "✅ All required checks passed"
-            exit 0
-          else
-            echo "❌ Some required checks failed"
-            exit 1
-          fi
-
